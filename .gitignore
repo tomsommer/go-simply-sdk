@@ -1,0 +1,8 @@
+.env
+bin/
+*.test
+coverage.out
+.vscode/
+.idea/
+internal/generated/
+openapi/doc.json

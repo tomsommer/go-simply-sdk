@@ -24,12 +24,14 @@ type Config struct {
 	AuthMode                            AuthMode
 	HTTPClient                          *http.Client
 }
+
 type Client struct {
 	cfg        Config
 	httpClient *http.Client
 	baseURL    string
 }
 
+// NewClient validates configuration and creates a Simply API client.
 func NewClient(cfg Config) (*Client, error) {
 	if cfg.APIKey == "" {
 		return nil, fmt.Errorf("simply: API key is required")
@@ -55,7 +57,11 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	return &Client{cfg: cfg, httpClient: cfg.HTTPClient, baseURL: strings.TrimRight(cfg.BaseURL, "/")}, nil
 }
-func (c *Client) Products() *ProductsService        { return &ProductsService{c} }
+
+// Products returns the product inventory service.
+func (c *Client) Products() *ProductsService { return &ProductsService{c} }
+
+// DNS returns the DNS management service.
 func (c *Client) DNS() *DNSService                  { return &DNSService{c} }
 func (c *Client) Billing() *UnsupportedService      { return &UnsupportedService{"billing"} }
 func (c *Client) Database() *UnsupportedService     { return &UnsupportedService{"database"} }
@@ -69,6 +75,7 @@ func (c *Client) Subdomains() *UnsupportedService   { return &UnsupportedService
 
 type UnsupportedService struct{ resource string }
 
+// Error reports that the selected Simply resource is not implemented yet.
 func (s *UnsupportedService) Error() error {
 	return fmt.Errorf("simply: %s operations are not implemented in this release", s.resource)
 }
@@ -85,15 +92,21 @@ type APIError struct {
 	Err                                   error
 }
 
+// Error returns a concise provider error without including credentials.
 func (e *APIError) Error() string {
 	if e.Message != "" {
 		return fmt.Sprintf("simply %s: %s", e.Operation, e.Message)
 	}
 	return fmt.Sprintf("simply %s: HTTP %d", e.Operation, e.StatusCode)
 }
-func (e *APIError) Unwrap() error        { return e.Err }
+
+// Unwrap returns the underlying transport or decoding error.
+func (e *APIError) Unwrap() error { return e.Err }
+
+// IsUnauthorized reports whether Simply rejected the credentials.
 func (e *APIError) IsUnauthorized() bool { return e.StatusCode == 401 }
 
+// do sends one authenticated JSON request and decodes its response.
 func (c *Client) do(ctx context.Context, method, path, operation string, body any, out any) (Response, error) {
 	var reader io.Reader
 	if body != nil {
@@ -143,6 +156,7 @@ func (c *Client) do(ctx context.Context, method, path, operation string, body an
 }
 
 type ProductsService struct{ client *Client }
+
 type Product struct {
 	Object string `json:"object"`
 	Type   string `json:"type"`
@@ -150,6 +164,7 @@ type Product struct {
 	Status string `json:"status"`
 }
 
+// List returns the products visible to the authenticated account.
 func (s *ProductsService) List(ctx context.Context) ([]Product, Response, error) {
 	var v []Product
 	res, err := s.client.do(ctx, http.MethodGet, "my/products/", "getProductList", nil, &v)
@@ -157,6 +172,7 @@ func (s *ProductsService) List(ctx context.Context) ([]Product, Response, error)
 }
 
 type DNSService struct{ client *Client }
+
 type Record struct {
 	ID    string `json:"id,omitempty"`
 	Name  string `json:"name"`
@@ -164,33 +180,45 @@ type Record struct {
 	Value string `json:"value"`
 	TTL   *int   `json:"ttl,omitempty"`
 }
+
 type Zone struct {
 	Object  string   `json:"object"`
 	Name    string   `json:"name"`
 	Records []Record `json:"records,omitempty"`
 }
 
+// ListRecords returns DNS records for a Simply product.
 func (s *DNSService) ListRecords(ctx context.Context, object string) ([]Record, Response, error) {
 	var v []Record
 	res, err := s.client.do(ctx, http.MethodGet, "my/products/"+url.PathEscape(object)+"/dns/records/", "getDnsRecords", nil, &v)
 	return v, res, err
 }
+
+// AddRecord creates one DNS record for a Simply product.
 func (s *DNSService) AddRecord(ctx context.Context, object string, record Record) (Record, Response, error) {
 	var v Record
 	res, err := s.client.do(ctx, http.MethodPost, "my/products/"+url.PathEscape(object)+"/dns/records/", "addDnsRecord", record, &v)
 	return v, res, err
 }
+
+// UpdateRecord replaces one DNS record for a Simply product.
 func (s *DNSService) UpdateRecord(ctx context.Context, object, id string, record Record) (Record, Response, error) {
 	var v Record
 	res, err := s.client.do(ctx, http.MethodPut, "my/products/"+url.PathEscape(object)+"/dns/records/"+url.PathEscape(id)+"/", "updateDnsRecord", record, &v)
 	return v, res, err
 }
+
+// DeleteRecord removes one DNS record from a Simply product.
 func (s *DNSService) DeleteRecord(ctx context.Context, object, id string) (Response, error) {
 	return s.client.do(ctx, http.MethodDelete, "my/products/"+url.PathEscape(object)+"/dns/records/"+url.PathEscape(id)+"/", "deleteDnsRecord", nil, nil)
 }
+
+// Reload refreshes the DNS zone for a Simply product.
 func (s *DNSService) Reload(ctx context.Context, object string) (Response, error) {
 	return s.client.do(ctx, http.MethodPost, "my/products/"+url.PathEscape(object)+"/dns/reload/", "reloadDnsZone", nil, nil)
 }
+
+// Zone returns the DNS zone for a Simply product.
 func (s *DNSService) Zone(ctx context.Context, object string) (Zone, Response, error) {
 	var v Zone
 	res, err := s.client.do(ctx, http.MethodGet, "my/products/"+url.PathEscape(object)+"/dns/", "getDnsZone", nil, &v)

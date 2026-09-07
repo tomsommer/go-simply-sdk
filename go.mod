@@ -1,3 +1,3 @@
-module github.com/jensen-systems/go-simply-sdk
+module github.com/kobberholm/go-simply-sdk
 
 go 1.26.6

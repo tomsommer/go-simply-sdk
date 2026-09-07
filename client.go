@@ -157,6 +157,25 @@ func (c *Client) do(ctx context.Context, method, path, operation string, body an
 
 type ProductsService struct{ client *Client }
 
+type productListResponse struct {
+	Products []Product `json:"products"`
+}
+
+// UnmarshalJSON accepts both the legacy bare array and Simply's response envelope.
+func (response *productListResponse) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) > 0 && data[0] == '[' {
+		return json.Unmarshal(data, &response.Products)
+	}
+	type plain productListResponse
+	var envelope plain
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return err
+	}
+	response.Products = envelope.Products
+	return nil
+}
+
 type Product struct {
 	Object string `json:"object"`
 	Type   string `json:"type"`
@@ -166,9 +185,9 @@ type Product struct {
 
 // List returns the products visible to the authenticated account.
 func (s *ProductsService) List(ctx context.Context) ([]Product, Response, error) {
-	var v []Product
-	res, err := s.client.do(ctx, http.MethodGet, "my/products/", "getProductList", nil, &v)
-	return v, res, err
+	var payload productListResponse
+	res, err := s.client.do(ctx, http.MethodGet, "my/products/", "getProductList", nil, &payload)
+	return payload.Products, res, err
 }
 
 type DNSService struct{ client *Client }

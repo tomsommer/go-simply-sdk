@@ -26,6 +26,21 @@ func TestProductsContract(t *testing.T) {
 		t.Fatalf("unexpected result: %+v %+v %v", products, response, err)
 	}
 }
+
+func TestProductsEnvelopeContract(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"products":[{"object":"ice.horse","name":"ice.horse"}],"status":200,"message":"success"}`))
+	}))
+	defer ts.Close()
+	c, err := NewClient(Config{APIKey: "key", BaseURL: ts.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	products, response, err := c.Products().List(context.Background())
+	if err != nil || response.StatusCode != http.StatusOK || len(products) != 1 || products[0].Object != "ice.horse" {
+		t.Fatalf("unexpected result: %+v %+v %v", products, response, err)
+	}
+}
 func TestDNSMutationContract(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/2/my/products/example.test/dns/records/" || r.Header.Get("Content-Type") != "application/json" {

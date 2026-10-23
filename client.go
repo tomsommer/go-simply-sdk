@@ -12,17 +12,26 @@ import (
 	"time"
 )
 
+// AuthMode selects how the API key is sent. Leave it empty to use AuthBearer,
+// the only mode that should be used.
 type AuthMode string
 
 const (
+	// AuthBearer sends the API key as a Bearer token. Simply.com identifies the
+	// account from the key alone.
 	AuthBearer AuthMode = "bearer"
-	AuthBasic  AuthMode = "basic"
+	// Deprecated: Use AuthBearer. Simply.com identifies the account from the API
+	// key and ignores the Basic auth username. Kept for backward compatibility.
+	AuthBasic AuthMode = "basic"
 )
 
 type Config struct {
-	APIKey, Account, BaseURL, UserAgent string
-	AuthMode                            AuthMode
-	HTTPClient                          *http.Client
+	APIKey, BaseURL, UserAgent string
+	// Deprecated: Not needed. Simply.com identifies the account from the API key.
+	// Only used as the username with the deprecated AuthBasic mode.
+	Account    string
+	AuthMode   AuthMode
+	HTTPClient *http.Client
 }
 
 type Client struct {

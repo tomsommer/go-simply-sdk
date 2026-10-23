@@ -60,13 +60,17 @@
       "id": "ddnsHelper",
       "method": "GET",
       "path": "/2/ddns/",
-      "status": "unimplemented"
+      "status": "not_planned",
+      "deprecated": true,
+      "note": "Deprecated and out of scope for this SDK. DDNS clients should use https://ddns.simply.com/nic/update."
     },
     {
       "id": "dyndns",
       "method": "GET",
       "path": "/2/dyndns/",
-      "status": "unimplemented"
+      "status": "not_planned",
+      "deprecated": true,
+      "note": "Deprecated and out of scope for this SDK. DDNS clients should use https://ddns.simply.com/nic/update."
     },
     {
       "id": "domaincheck",

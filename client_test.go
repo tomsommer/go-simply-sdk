@@ -74,3 +74,21 @@ func TestAPIError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestDeprecatedBasicAuthStillWorks(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || user != "acct" || pass != "key" {
+			t.Fatalf("unexpected authorization: %q", r.Header.Get("Authorization"))
+		}
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+	c, err := NewClient(Config{APIKey: "key", Account: "acct", AuthMode: AuthBasic, BaseURL: ts.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.Products().List(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
